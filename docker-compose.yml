@@ -1,0 +1,86 @@
+version: "3.7"
+services:
+  app:
+    build:
+      context: ./docker
+      dockerfile: Dockerfile
+    image: crm
+    container_name: crm-app
+    restart: unless-stopped
+    working_dir: /crm
+    volumes:
+      - ./src:/crm
+    ports:
+      - 5173:5173
+      - 6001:6001
+    networks:
+      - crm
+
+  db:
+    image: mysql:5.7
+    container_name: crm-db
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: crm
+      MYSQL_ROOT_PASSWORD: password
+      MYSQL_PASSWORD: password
+      MYSQL_USER: root
+    ports:
+      - 3306:3306
+    volumes:
+      - ./docker/mysql:/var/lib/mysql
+      - ./docker/log/mysql:/var/log/mysql
+    networks:
+      - crm
+
+  pma:
+    image: phpmyadmin/phpmyadmin
+    container_name: pma
+    links:
+      - db
+    environment:
+      PMA_HOST: db
+      PMA_PORT: 3306
+      PMA_USER: root
+      PMA_PASSWORD: password
+      PMA_ARBITRARY: 1
+    restart: always
+    ports:
+      - 8081:80
+    networks:
+      - crm
+
+  nginx:
+    image: nginx:alpine
+    container_name: crm-nginx
+    restart: unless-stopped
+    ports:
+      - 80:80
+    volumes:
+      - ./src:/crm
+      - ./docker/nginx/conf.d:/etc/nginx/conf.d
+      - ./docker/log/nginx:/var/log/nginx
+    networks:
+      - crm
+  redis:
+    image: redis:latest
+    container_name: crm-redis
+    restart: unless-stopped
+    ports:
+      - 6379:6379
+    networks:
+      - crm
+
+  mailhog:
+    image: mailhog/mailhog
+    logging:
+      driver: 'none'
+    ports:
+      - 1025:1025
+      - 8025:8025
+    networks:
+      - crm 
+
+networks:
+  crm:
+    driver: bridge
